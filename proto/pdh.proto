@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option go_package = "pdh/proto";
+
+enum MessageType {
+  Ping = 0;
+  Pong = 1;
+  Success = 2;
+  Failed = 3;
+  CreateChannel = 4;
+  CreateChannelSuccess = 5;
+  CreateChannelFailed = 6;
+  JoinChannel = 7;
+  JoinChannelSuccess = 8;
+  JoinChannelFailed = 9;
+  ChannelFull = 10;
+  ChannelNotFound = 11;
+  GetFileInfo = 12;
+  FileInfo = 13;
+  AgreeReceive = 14;
+  RefuseReceive = 15;
+  Cancel = 16;
+}
+
+message Message {
+  MessageType MessageType = 1;
+  bytes Payload = 2;
+}
+
+service PdhService {
+  rpc Transmit(stream Message) returns(stream Message){};
+}

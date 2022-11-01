@@ -1,0 +1,21 @@
+go.sum
+*_test.go
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+.fleet
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
