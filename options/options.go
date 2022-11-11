@@ -6,11 +6,11 @@ type RelayOptions struct {
 }
 
 type SenderOptions struct {
-	ShareCode     string
-	Relay         string
-	HashAlgorithm string
-	Zip           bool
-	LocalNetwork  bool
+	ShareCode    string
+	Relay        string
+	Zip          bool
+	LocalNetwork bool
+	LocalPort    string
 }
 
 type ReceiverOptions struct {
@@ -19,6 +19,7 @@ type ReceiverOptions struct {
 	OutPath      string
 	Zip          bool
 	LocalNetwork bool
+	LocalPort    string
 }
 
 type GrpcServerOptions struct {

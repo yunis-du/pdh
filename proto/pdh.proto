@@ -15,11 +15,19 @@ enum MessageType {
   JoinChannelFailed = 9;
   ChannelFull = 10;
   ChannelNotFound = 11;
-  GetFileInfo = 12;
-  FileInfo = 13;
-  AgreeReceive = 14;
-  RefuseReceive = 15;
-  Cancel = 16;
+  GetFileStat = 12;
+  FileStat = 13;
+  FileInfo = 14;
+  AgreeReceive = 15;
+  RefuseReceive = 16;
+  Cancel = 17;
+  SkipFile = 18;
+  FileData = 19;
+  FileFinish = 20;
+  ReadyForReceive = 21;
+  SendFileFinish = 22;
+  Interrupt = 23;
+  LocalNetworkMode = 24;
 }
 
 message Message {

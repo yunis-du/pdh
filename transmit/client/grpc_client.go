@@ -16,7 +16,7 @@ type GrpcClient struct {
 	conn     *grpc.ClientConn
 	client   proto.PdhServiceClient
 	stream   proto.PdhService_TransmitClient
-	handlers []transmit.ClientMessageHandler
+	handlers []transmit.MessageHandler
 	target   string
 }
 
@@ -33,7 +33,6 @@ func (p *GrpcClient) Start() error {
 		return err
 	}
 	p.stream = stream
-	p.AddHandler(p)
 
 	go p.receive()
 	return nil
@@ -49,14 +48,14 @@ func (p *GrpcClient) Stop() {
 }
 
 // AddHandler add a message handler
-func (p *GrpcClient) AddHandler(handler transmit.ClientMessageHandler) {
+func (p *GrpcClient) AddHandler(handler transmit.MessageHandler) {
 	p.Lock()
 	defer p.Unlock()
 	p.handlers = append(p.handlers, handler)
 }
 
 // RemoveHandler remove a message handler
-func (p *GrpcClient) RemoveHandler(handler transmit.ClientMessageHandler) {
+func (p *GrpcClient) RemoveHandler(handler transmit.MessageHandler) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -86,22 +85,20 @@ func (p *GrpcClient) receive() {
 		if err != nil {
 			return
 		}
-		for _, handler := range p.handlers {
-			go handler.HandleMessage(p.stream, msg)
-		}
+		streamWrapper := transmit.NewClientStreamWrapper(p.stream)
+		go p.dispatchMessage(msg, streamWrapper)
 	}
 }
 
-func (p *GrpcClient) HandleMessage(stream proto.PdhService_TransmitClient, msg *proto.Message) {
-	/*switch msg.MessageType {
-	case proto.MessageType_Ping:
-		_ = stream.Send(message.NewMessage(proto.MessageType_Pong, nil))
-	}*/
+func (p *GrpcClient) dispatchMessage(msg *proto.Message, cw *transmit.ClientStreamWrapper) {
+	for _, handler := range p.handlers {
+		handler.HandleMessage(cw, msg)
+	}
 }
 
 func NewPdhGrpcClient(target string) *GrpcClient {
 	return &GrpcClient{
 		target:   target,
-		handlers: make([]transmit.ClientMessageHandler, 0),
+		handlers: make([]transmit.MessageHandler, 0),
 	}
 }

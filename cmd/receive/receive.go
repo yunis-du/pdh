@@ -26,6 +26,7 @@ var Cmd = &cobra.Command{
 
 func init() {
 	Cmd.PersistentFlags().StringVarP(&opt.Relay, "relay", "", common.PublicRelay, "relay address")
-	Cmd.PersistentFlags().BoolVarP(&opt.LocalNetwork, "local", "", false, "use local network (default: false)")
 	Cmd.PersistentFlags().StringVarP(&opt.OutPath, "out", "o", "", "receive path")
+	Cmd.PersistentFlags().BoolVarP(&opt.LocalNetwork, "local", "", false, "use local network (default: false)")
+	Cmd.PersistentFlags().StringVarP(&opt.LocalPort, "local-port", "", "6880", "effect when the local network is enabled")
 }

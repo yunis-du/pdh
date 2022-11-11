@@ -8,6 +8,8 @@ type RWMutex struct {
 }
 
 const (
-	PublicRelay   = "127.0.0.1:50051"
-	MaxBufferSize = 1024 * 64
+	PublicRelay = "101.35.47.168:6880"
+	//PublicRelay      = "127.0.0.1:50051"
+	DefaultLocalPort = "6880"
+	MaxBufferSize    = 1024 * 64
 )

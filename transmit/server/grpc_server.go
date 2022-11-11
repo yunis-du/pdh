@@ -15,15 +15,15 @@ type GrpcServer struct {
 	common.RWMutex
 	proto.UnimplementedPdhServiceServer
 	options  *options.GrpcServerOptions
-	handlers []transmit.ServerMessageHandler
+	handlers []transmit.MessageHandler
 	streams  map[string]*transmit.ServerStreamWrapper
 	server   *grpc.Server
 }
 
 func (p *GrpcServer) Transmit(stream proto.PdhService_TransmitServer) error {
 	p.Lock()
-	genKey := tools.GenRandStr(8, ".")
-	sw := transmit.NewServerStreamWrapper(genKey, stream)
+	genKey := tools.GenRandStr(4, ".")
+	sw := transmit.NewServerStreamWrapper(stream)
 	p.streams[genKey] = sw
 	p.Unlock()
 	for {
@@ -34,19 +34,19 @@ func (p *GrpcServer) Transmit(stream proto.PdhService_TransmitServer) error {
 			p.Unlock()
 			return err
 		}
-		p.dispatchMessage(msg, sw)
+		go p.dispatchMessage(msg, sw)
 	}
 }
 
 // AddHandler add a message handler
-func (p *GrpcServer) AddHandler(handler transmit.ServerMessageHandler) {
+func (p *GrpcServer) AddHandler(handler transmit.MessageHandler) {
 	p.Lock()
 	defer p.Unlock()
 	p.handlers = append(p.handlers, handler)
 }
 
 // RemoveHandler remove a message handler
-func (p *GrpcServer) RemoveHandler(handler transmit.ServerMessageHandler) {
+func (p *GrpcServer) RemoveHandler(handler transmit.MessageHandler) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -101,7 +101,7 @@ func NewPdhGrpcServer(opt *options.GrpcServerOptions) *GrpcServer {
 	return &GrpcServer{
 		server:   grpc.NewServer(),
 		options:  opt,
-		handlers: make([]transmit.ServerMessageHandler, 0),
+		handlers: make([]transmit.MessageHandler, 0),
 		streams:  make(map[string]*transmit.ServerStreamWrapper, 0),
 	}
 }

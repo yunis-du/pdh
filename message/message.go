@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/duyunzhi/pdh/files"
 	"github.com/duyunzhi/pdh/proto"
 )
 
@@ -11,8 +12,8 @@ import (
 type Protocol string
 
 const (
-	// ProtobufProtocol is used for protobuf encoded messages
-	ProtobufProtocol Protocol = "protobuf"
+	// RawProtocol is raw messages
+	RawProtocol Protocol = "raw"
 	// JSONProtocol is used for JSON encoded messages
 	JSONProtocol Protocol = "json"
 )
@@ -46,6 +47,30 @@ func (f *FileStatPayload) Bytes(protocol Protocol) ([]byte, error) {
 	return nil, nil
 }
 
+type FileInfoPayload struct {
+	FileInfo *files.FileInfo
+}
+
+func (f *FileInfoPayload) Bytes(protocol Protocol) ([]byte, error) {
+	if protocol == JSONProtocol {
+		return json.Marshal(f)
+	}
+	return nil, nil
+}
+
+type FileDataPayload struct {
+	Data     []byte
+	Position int64
+	EOF      bool
+}
+
+func (f *FileDataPayload) Bytes(protocol Protocol) ([]byte, error) {
+	if protocol == JSONProtocol {
+		return json.Marshal(f)
+	}
+	return nil, nil
+}
+
 func ParseMessagePayload(msg *proto.Message) (Message, error) {
 	if msg == nil {
 		return nil, errors.New("message is nil")
@@ -58,7 +83,7 @@ func ParseMessagePayload(msg *proto.Message) (Message, error) {
 			shareCode = string(payload)
 		}
 		return &ShareCodePayload{ShareCode: shareCode}, nil
-	case proto.MessageType_FileInfo:
+	case proto.MessageType_FileStat:
 		if payload != nil {
 			var fs FileStatPayload
 			err := json.Unmarshal(payload, &fs)
@@ -66,6 +91,24 @@ func ParseMessagePayload(msg *proto.Message) (Message, error) {
 				return nil, err
 			}
 			return &fs, nil
+		}
+	case proto.MessageType_FileInfo:
+		if payload != nil {
+			var fi FileInfoPayload
+			err := json.Unmarshal(payload, &fi)
+			if err != nil {
+				return nil, err
+			}
+			return &fi, nil
+		}
+	case proto.MessageType_FileData:
+		if payload != nil {
+			var fd FileDataPayload
+			err := json.Unmarshal(payload, &fd)
+			if err != nil {
+				return nil, err
+			}
+			return &fd, nil
 		}
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown message type: [%s]", msg.MessageType.String()))

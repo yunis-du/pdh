@@ -77,7 +77,7 @@ func (r *Relay) checkChannel() {
 	}
 }
 
-func (r *Relay) HandleMessage(sw *transmit.ServerStreamWrapper, msg *proto.Message) {
+func (r *Relay) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 	r.Lock()
 	defer r.Unlock()
 	switch msg.MessageType {
@@ -92,16 +92,16 @@ func (r *Relay) HandleMessage(sw *transmit.ServerStreamWrapper, msg *proto.Messa
 		if len(shareCode) > 0 {
 			_, ok := r.channels[shareCode]
 			if ok {
-				_ = sw.Send(message.NewMessage(proto.MessageType_CreateChannelFailed, nil))
+				_ = stream.Send(message.NewMessage(proto.MessageType_CreateChannelFailed, nil))
 			} else {
 				r.channels[shareCode] = &channel{
-					owner:     sw,
+					owner:     stream.(*transmit.ServerStreamWrapper),
 					createdAt: time.Now(),
 				}
-				_ = sw.Send(message.NewMessage(proto.MessageType_CreateChannelSuccess, nil))
+				_ = stream.Send(message.NewMessage(proto.MessageType_CreateChannelSuccess, nil))
 			}
 		} else {
-			_ = sw.Send(message.NewMessage(proto.MessageType_CreateChannelFailed, nil))
+			_ = stream.Send(message.NewMessage(proto.MessageType_CreateChannelFailed, nil))
 		}
 	case proto.MessageType_JoinChannel:
 		parseMsg, err := message.ParseMessagePayload(msg)
@@ -115,20 +115,20 @@ func (r *Relay) HandleMessage(sw *transmit.ServerStreamWrapper, msg *proto.Messa
 			ch, ok := r.channels[shareCode]
 			if ok {
 				if ch.full {
-					_ = sw.Send(message.NewMessage(proto.MessageType_ChannelFull, nil))
+					_ = stream.Send(message.NewMessage(proto.MessageType_ChannelFull, nil))
 				} else {
-					ch.visitor = sw
+					ch.visitor = stream.(*transmit.ServerStreamWrapper)
 					// create pipe
 					ch.pipe = pipe.CreatePipe(ch.owner, ch.visitor)
 					ch.pipe.Start()
 
-					_ = sw.Send(message.NewMessage(proto.MessageType_JoinChannelSuccess, nil))
+					_ = stream.Send(message.NewMessage(proto.MessageType_JoinChannelSuccess, nil))
 				}
 			} else {
-				_ = sw.Send(message.NewMessage(proto.MessageType_ChannelNotFound, nil))
+				_ = stream.Send(message.NewMessage(proto.MessageType_ChannelNotFound, nil))
 			}
 		} else {
-			_ = sw.Send(message.NewMessage(proto.MessageType_JoinChannelFailed, nil))
+			_ = stream.Send(message.NewMessage(proto.MessageType_JoinChannelFailed, nil))
 		}
 
 	}

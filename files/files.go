@@ -17,7 +17,7 @@ type FileInfo struct {
 	Name         string `json:"Name,omitempty"`
 	FolderRemote string `json:"FolderRemote,omitempty"`
 	FolderSource string `json:"FolderSource,omitempty"`
-	Hash         []byte `json:"Hash,omitempty"`
+	//Hash         []byte `json:"Hash,omitempty"`
 	Size         int64  `json:"Size,omitempty"`
 	ModTime      int64  `json:"ModTime,omitempty"`
 	IsCompressed bool   `json:"IsCompressed,omitempty"`

@@ -5,18 +5,17 @@ import (
 	"sync/atomic"
 )
 
-type ServerMessageHandler interface {
-	HandleMessage(sw *ServerStreamWrapper, msg *proto.Message)
+type MessageHandler interface {
+	HandleMessage(stream GrpcStream, msg *proto.Message)
 }
 
-type ClientMessageHandler interface {
-	HandleMessage(stream proto.PdhService_TransmitClient, msg *proto.Message)
+type GrpcStream interface {
+	Send(msg *proto.Message) error
 }
 
 type ServerStreamWrapper struct {
-	Key       string
 	Stream    proto.PdhService_TransmitServer
-	handlers  []ServerMessageHandler
+	handlers  []MessageHandler
 	Ch        chan *proto.Message
 	WriteToCh atomic.Bool
 }
@@ -33,10 +32,23 @@ func (s *ServerStreamWrapper) StopWriteToChannel() {
 	s.WriteToCh.Store(false)
 }
 
-func NewServerStreamWrapper(key string, stream proto.PdhService_TransmitServer) *ServerStreamWrapper {
+func NewServerStreamWrapper(stream proto.PdhService_TransmitServer) *ServerStreamWrapper {
 	return &ServerStreamWrapper{
-		Key:    key,
 		Stream: stream,
 		Ch:     make(chan *proto.Message, 10),
+	}
+}
+
+type ClientStreamWrapper struct {
+	Stream proto.PdhService_TransmitClient
+}
+
+func (c *ClientStreamWrapper) Send(msg *proto.Message) error {
+	return c.Stream.Send(msg)
+}
+
+func NewClientStreamWrapper(stream proto.PdhService_TransmitClient) *ClientStreamWrapper {
+	return &ClientStreamWrapper{
+		Stream: stream,
 	}
 }

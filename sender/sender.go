@@ -2,16 +2,23 @@ package sender
 
 import (
 	"fmt"
+	"github.com/duyunzhi/discovery"
 	"github.com/duyunzhi/pdh/common"
 	"github.com/duyunzhi/pdh/files"
 	"github.com/duyunzhi/pdh/message"
 	"github.com/duyunzhi/pdh/options"
 	"github.com/duyunzhi/pdh/proto"
 	"github.com/duyunzhi/pdh/tools"
+	"github.com/duyunzhi/pdh/transmit"
 	"github.com/duyunzhi/pdh/transmit/client"
 	"github.com/duyunzhi/pdh/transmit/server"
+	"github.com/duyunzhi/progress_bar"
+	"io"
 	"os"
+	"os/signal"
+	"path"
 	"path/filepath"
+	"syscall"
 	"time"
 )
 
@@ -21,12 +28,13 @@ type Sender struct {
 	TotalNumberOfContents     int
 	FilesToTransferCurrentNum int
 
-	fs   *files.Files
-	gs   *server.GrpcServer
-	gc   *client.GrpcClient
-	opt  *options.SenderOptions
-	quit chan bool
-	done chan bool
+	fs            *files.Files
+	gs            *server.GrpcServer
+	gc            *client.GrpcClient
+	opt           *options.SenderOptions
+	fileHandleMsg chan *proto.Message
+	quit          chan bool
+	done          chan bool
 }
 
 // Send files
@@ -43,16 +51,30 @@ func (s *Sender) Send(filePaths []string) {
 	if s.opt.LocalNetwork {
 		err = s.sendWithLocalNetwork()
 	} else {
+		err = s.sendWithLocalNetwork()
 		err = s.sendWithRelay()
 	}
 	if err != nil {
 		tools.Println(tools.Red, fmt.Sprintf("send files error: %s", err))
 		os.Exit(1)
 	}
+	go s.signal()
 	<-s.done
 }
 
 func (s *Sender) sendWithLocalNetwork() error {
+	opt := &discovery.Options{
+		Duration:       -1,
+		BroadcastDelay: time.Second,
+		Payload:        []byte(s.opt.ShareCode),
+	}
+
+	broadcast := discovery.NewBroadcast(opt)
+	broadcast.StartAsSync()
+
+	grpcServer := server.NewPdhGrpcServer(&options.GrpcServerOptions{Address: "0.0.0.0", Ports: s.opt.LocalPort})
+	grpcServer.AddHandler(s)
+	go grpcServer.Start()
 	return nil
 }
 
@@ -74,9 +96,30 @@ func (s *Sender) Done() {
 	s.done <- true
 }
 
-func (s *Sender) HandleMessage(stream proto.PdhService_TransmitClient, msg *proto.Message) {
+func (s *Sender) signal() {
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	for {
+		select {
+		case <-interrupt:
+			if s.gc != nil {
+				_ = s.gc.Send(message.NewMessage(proto.MessageType_Interrupt, nil))
+			}
+			s.Done()
+		}
+	}
+}
+
+func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 	var err error
 	switch msg.MessageType {
+	case proto.MessageType_LocalNetworkMode:
+		// local network mode, stop relay client
+		s.gc.Stop()
+		s.gc = nil
+	case proto.MessageType_Interrupt:
+		fmt.Println("send interrupt...")
+		s.Done()
 	case proto.MessageType_Cancel:
 		fmt.Println("send cancel")
 		s.Done()
@@ -93,33 +136,118 @@ func (s *Sender) HandleMessage(stream proto.PdhService_TransmitClient, msg *prot
 		if s.opt.LocalNetwork {
 			fmt.Println("pdh receive --local", s.opt.ShareCode)
 		} else if s.opt.Relay == common.PublicRelay {
-			fmt.Println("pdh receive", s.opt.ShareCode)
+			if s.opt.LocalNetwork && s.opt.LocalPort != common.DefaultLocalPort {
+				fmt.Println("pdh receive --local --local-port", s.opt.LocalPort, s.opt.ShareCode)
+			} else {
+				fmt.Println("pdh receive", s.opt.ShareCode)
+			}
 		} else {
 			fmt.Println("pdh receive --relay", s.opt.Relay, s.opt.ShareCode)
 		}
 	case proto.MessageType_CreateChannelFailed:
 		tools.Println(tools.Red, "create channel failed.")
-		os.Exit(1)
-	case proto.MessageType_GetFileInfo:
+		s.Done()
+	case proto.MessageType_GetFileStat:
 		fileStat := &message.FileStatPayload{
 			FilesSize:    s.TotalFilesSize,
 			FilesNumber:  int64(len(s.fs.FilesInfo)),
 			FolderNumber: int64(s.fs.TotalNumberFolders),
 		}
 		payload, _ := fileStat.Bytes(message.JSONProtocol)
-		err = stream.Send(message.NewMessage(proto.MessageType_FileInfo, payload))
+		err = stream.Send(message.NewMessage(proto.MessageType_FileStat, payload))
 		if err != nil {
 			tools.Println(tools.Red, "stream is error.")
-			os.Exit(1)
+			s.Done()
 		}
 	case proto.MessageType_RefuseReceive:
 		tools.Println(tools.Yellow, "the other refused receive.")
 		s.Done()
+	case proto.MessageType_SkipFile, proto.MessageType_ReadyForReceive, proto.MessageType_FileFinish:
+		s.fileHandleMsg <- msg
 	case proto.MessageType_AgreeReceive:
 		// start send files
-		/*for _, fileInfo := range s.fs.FilesInfo {
+		fmt.Println()
+		fmt.Println("Sending...")
+		fmt.Println()
+	LOOP:
+		for _, fileInfo := range s.fs.FilesInfo {
+			fileInfoPayload := &message.FileInfoPayload{
+				FileInfo: fileInfo,
+			}
+			payload, _ := fileInfoPayload.Bytes(message.JSONProtocol)
+			err = stream.Send(message.NewMessage(proto.MessageType_FileInfo, payload))
+			if err != nil {
+				tools.Println(tools.Red, "stream is error.")
+				s.Done()
+				return
+			}
 
-		}*/
+		HANDLE:
+			for {
+				select {
+				case m := <-s.fileHandleMsg:
+					switch m.MessageType {
+					case proto.MessageType_SkipFile:
+						continue LOOP
+					case proto.MessageType_ReadyForReceive:
+						break HANDLE
+					}
+				}
+			}
+
+			barOpt := &progress_bar.Options{
+				Describe:     fileInfo.Name,
+				IsBytes:      true,
+				ShowPercent:  true,
+				ShowDuration: true,
+			}
+			bar := progress_bar.NewBarWithOptions(fileInfo.Size, barOpt)
+			filePath := path.Join(fileInfo.FolderSource, fileInfo.Name)
+			reading, err := os.Open(filePath)
+			if err != nil {
+				return
+			}
+			readingPosition := int64(0)
+
+			finish := false
+			EOF := false
+
+			for {
+				data := make([]byte, common.MaxBufferSize/2)
+				n, err := reading.ReadAt(data, readingPosition)
+				if err != nil {
+					if err == io.EOF {
+						finish = true
+						EOF = true
+					} else {
+						tools.Println(tools.Red, fmt.Sprintf("read file error: %s", err))
+						s.Done()
+						return
+					}
+				}
+				readingPosition += int64(n)
+				pl := &message.FileDataPayload{
+					Data:     data[:n],
+					Position: readingPosition,
+					EOF:      EOF,
+				}
+				filePayload, _ := pl.Bytes(message.JSONProtocol)
+				fdm := message.NewMessage(proto.MessageType_FileData, filePayload)
+				err = stream.Send(fdm)
+				if err != nil {
+					tools.Println(tools.Red, "stream is error.")
+					s.Done()
+					return
+				}
+				bar.Add(readingPosition)
+				if finish {
+					bar.Finish()
+					break
+				}
+			}
+		}
+		//_ = stream.Send(message.NewMessage(proto.MessageType_SendFileFinish, nil))
+		s.Done()
 	}
 }
 
@@ -138,12 +266,6 @@ func (s *Sender) sendCollectFiles() (err error) {
 			if err != nil {
 			}
 		}
-
-		if s.opt.HashAlgorithm == "" {
-			s.opt.HashAlgorithm = "xxhash"
-		}
-
-		fileInfo.Hash, err = tools.HashFile(fullPath, s.opt.HashAlgorithm)
 		s.TotalFilesSize += fileInfo.Size
 		if err != nil {
 			return
@@ -179,8 +301,9 @@ func checkOptions(opt *options.SenderOptions) {
 func NewSender(opt *options.SenderOptions) *Sender {
 	checkOptions(opt)
 	return &Sender{
-		opt:  opt,
-		quit: make(chan bool, 1),
-		done: make(chan bool, 1),
+		opt:           opt,
+		fileHandleMsg: make(chan *proto.Message, 10),
+		quit:          make(chan bool, 1),
+		done:          make(chan bool, 1),
 	}
 }
