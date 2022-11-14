@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/duyunzhi/discovery"
 	"github.com/duyunzhi/pdh/common"
+	"github.com/duyunzhi/pdh/compress"
 	"github.com/duyunzhi/pdh/files"
 	"github.com/duyunzhi/pdh/message"
 	"github.com/duyunzhi/pdh/options"
@@ -18,6 +19,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -170,7 +172,7 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 		fmt.Println("Sending...")
 		fmt.Println()
 	LOOP:
-		for _, fileInfo := range s.fs.FilesInfo {
+		for index, fileInfo := range s.fs.FilesInfo {
 			fileInfoPayload := &message.FileInfoPayload{
 				FileInfo: fileInfo,
 			}
@@ -188,6 +190,10 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 				case m := <-s.fileHandleMsg:
 					switch m.MessageType {
 					case proto.MessageType_SkipFile:
+						if index == len(s.fs.FilesInfo)-1 {
+							// no file to send
+							_ = stream.Send(message.NewMessage(proto.MessageType_FileFinish, nil))
+						}
 						continue LOOP
 					case proto.MessageType_ReadyForReceive:
 						break HANDLE
@@ -197,6 +203,7 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 
 			barOpt := &progress_bar.Options{
 				Describe:     fileInfo.Name,
+				Graph:        ">",
 				IsBytes:      true,
 				ShowPercent:  true,
 				ShowDuration: true,
@@ -225,9 +232,10 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 						return
 					}
 				}
+				dataToSend := compress.Compress(data[:n])
 				readingPosition += int64(n)
 				pl := &message.FileDataPayload{
-					Data:     data[:n],
+					Data:     dataToSend,
 					Position: readingPosition,
 					EOF:      EOF,
 				}
@@ -246,7 +254,15 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 				}
 			}
 		}
-		//_ = stream.Send(message.NewMessage(proto.MessageType_SendFileFinish, nil))
+		fmt.Println("Send Completed!")
+		if s.opt.Zip {
+			// delete zip file
+			for _, info := range s.fs.FilesInfo {
+				if strings.HasSuffix(info.Name, ".zip") {
+					_ = os.Remove(info.Name)
+				}
+			}
+		}
 		s.Done()
 	}
 }

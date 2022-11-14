@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/duyunzhi/discovery"
 	"github.com/duyunzhi/pdh/common"
+	"github.com/duyunzhi/pdh/compress"
 	"github.com/duyunzhi/pdh/message"
 	"github.com/duyunzhi/pdh/options"
 	"github.com/duyunzhi/pdh/proto"
@@ -35,8 +36,6 @@ type Receiver struct {
 }
 
 func (r *Receiver) Receive() {
-	fmt.Print("Starting receive...")
-	fmt.Print("\r                              ")
 	var err error
 
 	err = r.receiveFromLocalNetwork()
@@ -53,8 +52,9 @@ func (r *Receiver) Receive() {
 
 func (r *Receiver) receiveFromLocalNetwork() error {
 	opt := &discovery.Options{
-		Limit:   1,
-		Payload: []byte(r.opt.ShareCode),
+		Limit:     1,
+		TimeLimit: time.Second * 5,
+		Payload:   []byte(r.opt.ShareCode),
 	}
 	discover := discovery.NewDiscover(opt)
 	broadcast, err := discover.DiscoverBroadcast()
@@ -118,10 +118,10 @@ func (r *Receiver) HandleMessage(stream transmit.GrpcStream, msg *proto.Message)
 	var err error
 	switch msg.MessageType {
 	case proto.MessageType_Interrupt:
-		fmt.Println("receive interrupt...")
+		fmt.Println("\rreceive interrupt...")
 		r.Done()
 	case proto.MessageType_ChannelFull:
-		tools.Println(tools.Red, "channel is full, someone else has already received it.")
+		tools.Println(tools.Red, "\rchannel is full, someone else has already received it.")
 		r.Done()
 	case proto.MessageType_JoinChannelSuccess:
 		fmt.Print("\rjoin channel success.")
@@ -131,15 +131,17 @@ func (r *Receiver) HandleMessage(stream transmit.GrpcStream, msg *proto.Message)
 			r.Done()
 		}
 	case proto.MessageType_ChannelNotFound:
-		tools.Println(tools.Red, "channel not found, please check your share code.")
+		tools.Println(tools.Red, "\rchannel not found, please check your share code.")
 		r.Done()
 	case proto.MessageType_JoinChannelFailed:
-		tools.Println(tools.Red, "join channel failed.")
+		tools.Println(tools.Red, "\rjoin channel failed.")
+		r.Done()
+	case proto.MessageType_FileFinish:
 		r.Done()
 	case proto.MessageType_FileStat:
 		pm, err := message.ParseMessagePayload(msg)
 		if err != nil {
-			tools.Println(tools.Red, "get file stat failed.")
+			tools.Println(tools.Red, "\rget file stat failed.")
 			r.Done()
 			return
 		}
@@ -155,7 +157,7 @@ func (r *Receiver) HandleMessage(stream transmit.GrpcStream, msg *proto.Message)
 		r.filesSize = stat.FilesSize
 		err = stream.Send(message.NewMessage(proto.MessageType_AgreeReceive, nil))
 		if err != nil {
-			tools.Println(tools.Red, "stream is error.")
+			tools.Println(tools.Red, "\rstream is error.")
 			r.Done()
 		}
 		fmt.Println()
@@ -230,6 +232,7 @@ func (r *Receiver) HandleMessage(stream transmit.GrpcStream, msg *proto.Message)
 			}
 			barOpt := &progress_bar.Options{
 				Describe:     fileInfo.Name,
+				Graph:        ">",
 				IsBytes:      true,
 				ShowPercent:  true,
 				ShowDuration: true,
@@ -247,7 +250,8 @@ func (r *Receiver) HandleMessage(stream transmit.GrpcStream, msg *proto.Message)
 							pmp, _ := message.ParseMessagePayload(m)
 							fileDataMsg := pmp.(*message.FileDataPayload)
 							if fileDataMsg.Data != nil {
-								_, err = r.currentFile.Write(fileDataMsg.Data)
+								receiveData := compress.Decompress(fileDataMsg.Data)
+								_, err = r.currentFile.Write(receiveData)
 								if err != nil {
 									tools.Println(tools.Red, fmt.Sprintf("write file [%s] failed: %s", pathToFile, err))
 									_ = os.Remove(r.currentFile.Name())

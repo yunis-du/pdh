@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.1
-	github.com/duyunzhi/discovery v1.0.1
-	github.com/duyunzhi/progress_bar v0.0.9
+	github.com/duyunzhi/discovery v1.0.3
+	github.com/duyunzhi/progress_bar v0.1.0
 	github.com/kalafut/imohash v1.0.2
 	github.com/spf13/cobra v1.6.0
 	google.golang.org/grpc v1.50.1
