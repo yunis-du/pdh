@@ -93,6 +93,14 @@ func (s *Sender) sendWithRelay() error {
 }
 
 func (s *Sender) Done() {
+	if s.opt.Zip {
+		// delete zip file
+		for _, info := range s.fs.FilesInfo {
+			if strings.HasSuffix(info.Name, ".zip") {
+				_ = os.Remove(info.Name)
+			}
+		}
+	}
 	// sleep, send an end message to the other.
 	time.Sleep(time.Second)
 	s.done <- true
@@ -255,14 +263,6 @@ func (s *Sender) HandleMessage(stream transmit.GrpcStream, msg *proto.Message) {
 			}
 		}
 		fmt.Println("Send Completed!")
-		if s.opt.Zip {
-			// delete zip file
-			for _, info := range s.fs.FilesInfo {
-				if strings.HasSuffix(info.Name, ".zip") {
-					_ = os.Remove(info.Name)
-				}
-			}
-		}
 		s.Done()
 	}
 }
