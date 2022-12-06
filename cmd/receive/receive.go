@@ -5,6 +5,7 @@ import (
 	"github.com/duyunzhi/pdh/common"
 	"github.com/duyunzhi/pdh/options"
 	"github.com/duyunzhi/pdh/receiver"
+	"github.com/duyunzhi/pdh/tools"
 	"github.com/spf13/cobra"
 )
 
@@ -15,10 +16,17 @@ var Cmd = &cobra.Command{
 	Short: "Receive file(s), or folder (see options with pdh receive -h)",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
+			choice := tools.GetInput("Enter Share Code: ")
+			if choice != "" {
+				opt.ShareCode = choice
+			}
+		} else {
+			opt.ShareCode = args[0]
+		}
+		if tools.IsEmpty(opt.ShareCode) {
 			fmt.Println("no share code")
 			return
 		}
-		opt.ShareCode = args[0]
 		rec := receiver.NewReceiver(opt)
 		rec.Receive()
 	},
