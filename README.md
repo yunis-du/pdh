@@ -2,7 +2,7 @@
 
 send things from one computer to another
 
-![](./pdh_demo.gif)
+![image](pdh_demo.gif)
 
 ## install
 
