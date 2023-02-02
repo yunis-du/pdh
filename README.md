@@ -2,6 +2,8 @@
 
 send things from one computer to another
 
+![](./pdh_demo.gif)
+
 ## install
 
 ### Download for your system

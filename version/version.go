@@ -8,7 +8,7 @@ import (
 
 var Package = "[pdh]"
 
-var Version = "0.1.1"
+var Version = "0.1.2"
 
 func FprintVersion(w io.Writer) {
 	_, _ = fmt.Fprintln(w, Package, Version)
