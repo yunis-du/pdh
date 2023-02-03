@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/duyunzhi/pdh/cmd/receive"
-	"github.com/duyunzhi/pdh/cmd/relay"
-	"github.com/duyunzhi/pdh/cmd/send"
-	"github.com/duyunzhi/pdh/cmd/version"
+	"github.com/duyunis/pdh/cmd/receive"
+	"github.com/duyunis/pdh/cmd/relay"
+	"github.com/duyunis/pdh/cmd/send"
+	"github.com/duyunis/pdh/cmd/version"
 	"github.com/spf13/cobra"
 )
 

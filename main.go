@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/duyunzhi/pdh/cmd"
+	"github.com/duyunis/pdh/cmd"
 )
 
 func main() {

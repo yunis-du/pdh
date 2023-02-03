@@ -1,8 +1,8 @@
 package relay
 
 import (
-	"github.com/duyunzhi/pdh/options"
-	"github.com/duyunzhi/pdh/relay"
+	"github.com/duyunis/pdh/options"
+	"github.com/duyunis/pdh/relay"
 	"github.com/spf13/cobra"
 	"log"
 )

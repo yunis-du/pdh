@@ -1,7 +1,7 @@
 package version
 
 import (
-	"github.com/duyunzhi/pdh/version"
+	"github.com/duyunis/pdh/version"
 	"github.com/spf13/cobra"
 )
 

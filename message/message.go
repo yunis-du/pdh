@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/duyunzhi/pdh/files"
-	"github.com/duyunzhi/pdh/proto"
+	"github.com/duyunis/pdh/files"
+	"github.com/duyunis/pdh/proto"
 )
 
 // Protocol used to transport messages
