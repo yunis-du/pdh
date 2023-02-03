@@ -1,7 +1,7 @@
 package files
 
 import (
-	"github.com/duyunzhi/pdh/tools"
+	"github.com/duyunis/pdh/tools"
 	"os"
 	"path/filepath"
 	"strings"

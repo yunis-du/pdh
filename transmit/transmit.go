@@ -1,7 +1,7 @@
 package transmit
 
 import (
-	"github.com/duyunzhi/pdh/proto"
+	"github.com/duyunis/pdh/proto"
 	"sync/atomic"
 )
 

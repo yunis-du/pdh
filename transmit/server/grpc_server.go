@@ -2,11 +2,11 @@ package server
 
 import (
 	"errors"
-	"github.com/duyunzhi/pdh/common"
-	"github.com/duyunzhi/pdh/options"
-	"github.com/duyunzhi/pdh/proto"
-	"github.com/duyunzhi/pdh/tools"
-	"github.com/duyunzhi/pdh/transmit"
+	"github.com/duyunis/pdh/common"
+	"github.com/duyunis/pdh/options"
+	"github.com/duyunis/pdh/proto"
+	"github.com/duyunis/pdh/tools"
+	"github.com/duyunis/pdh/transmit"
 	"google.golang.org/grpc"
 	"net"
 )

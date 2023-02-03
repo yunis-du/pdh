@@ -2,10 +2,10 @@ package receive
 
 import (
 	"fmt"
-	"github.com/duyunzhi/pdh/common"
-	"github.com/duyunzhi/pdh/options"
-	"github.com/duyunzhi/pdh/receiver"
-	"github.com/duyunzhi/pdh/tools"
+	"github.com/duyunis/pdh/common"
+	"github.com/duyunis/pdh/options"
+	"github.com/duyunis/pdh/receiver"
+	"github.com/duyunis/pdh/tools"
 	"github.com/spf13/cobra"
 )
 

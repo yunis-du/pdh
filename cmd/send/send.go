@@ -1,10 +1,10 @@
 package send
 
 import (
-	"github.com/duyunzhi/pdh/common"
-	"github.com/duyunzhi/pdh/options"
-	"github.com/duyunzhi/pdh/sender"
-	"github.com/duyunzhi/pdh/tools"
+	"github.com/duyunis/pdh/common"
+	"github.com/duyunis/pdh/options"
+	"github.com/duyunis/pdh/sender"
+	"github.com/duyunis/pdh/tools"
 	"github.com/spf13/cobra"
 )
 

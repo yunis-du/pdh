@@ -8,16 +8,16 @@ send things from one computer to another
 
 ### Download for your system
 ```bash
-https://github.com/duyunzhi/pdh/releases
+https://github.com/duyunis/pdh/releases
 ```
 Or gitee
 ```bash
-https://gitee.com/duyunzhi_admin/pdh/releases
+https://gitee.com/duyunis_admin/pdh/releases
 ```
 
 ### On macOS you can install the latest release with Homebrew
 ```bash
-brew tap duyunzhi/brew
+brew tap duyunis/brew
 brew install pdh
 ```
 
@@ -42,9 +42,9 @@ pdh receive xxxx-xxxx-xxxx-xxxx
 ### deployment your owner relay
 
 ```bash
-docker pull duyunzhi1/pdh-relay
+docker pull duyunis/pdh-relay:latest
 
-docker run -it -d -p 6880:6880 --name=pdh-relay --restart=always duyunzhi1/pdh-relay
+docker run -it -d -p 6880:6880 --name=pdh-relay --restart=always duyunis/pdh-relay:latest
 ```
 
 send

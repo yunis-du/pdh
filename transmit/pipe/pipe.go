@@ -1,9 +1,9 @@
 package pipe
 
 import (
-	"github.com/duyunzhi/pdh/message"
-	"github.com/duyunzhi/pdh/proto"
-	"github.com/duyunzhi/pdh/transmit"
+	"github.com/duyunis/pdh/message"
+	"github.com/duyunis/pdh/proto"
+	"github.com/duyunis/pdh/transmit"
 	"log"
 	"sync/atomic"
 )

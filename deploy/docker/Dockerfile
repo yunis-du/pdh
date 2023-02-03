@@ -1,7 +1,5 @@
 FROM golang:alpine as builder
 
-RUN mkdir /var/log/ultraflow/
-
 WORKDIR /pdh/relay
 COPY . .
 
@@ -14,7 +12,7 @@ RUN go env -w GO111MODULE=on \
 
 FROM alpine:latest
 
-LABEL maintainer=duyunzhi<duyzmail@163.com>\
+LABEL maintainer=duyunis<duyunis@outlook.com>\
 description="pdh relay"
 
 RUN echo -e http://mirrors.ustc.edu.cn/alpine/latest-stable/main/ > /etc/apk/repositories && apk update && apk add tzdata
